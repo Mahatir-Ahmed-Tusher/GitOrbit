@@ -17,6 +17,9 @@ export function useLocalStorage<T>(
       const item = window.localStorage.getItem(key)
       if (item) {
         setStoredValue(JSON.parse(item))
+      } else if (key === 'gitorbit_github_pat' && process.env.NEXT_PUBLIC_GITHUB_PAT) {
+        // If no value in localStorage, and it's the PAT key, use env var
+        setStoredValue(process.env.NEXT_PUBLIC_GITHUB_PAT as T);
       }
     } catch (error) {
       console.error(error)
@@ -53,6 +56,9 @@ export function useLocalStorage<T>(
   // On the server, or before the client has mounted, return the initial value.
   // The setter function is a no-op to prevent errors.
   if (!isMounted) {
+      if (key === 'gitorbit_github_pat' && process.env.NEXT_PUBLIC_GITHUB_PAT) {
+        return [process.env.NEXT_PUBLIC_GITHUB_PAT as T, () => {}]
+      }
       return [initialValue, () => {}];
   }
 
