@@ -74,7 +74,7 @@ npm install
 
 ### 3. Set up environment variables
 
-You'll need API keys for Google Gemini, OpenRouter, SerpAPI, and Mistral.
+You'll need API keys for Google Gemini, OpenRouter, SerpAPI, and Mistral. You can also optionally provide a GitHub Personal Access Token to avoid entering it in the UI.
 
 1.  Create a new file named `.env` in the root of the project.
 2.  Get your Google Gemini API key from [Google AI Studio](https://aistudio.google.com/app/apikey).
@@ -87,6 +87,10 @@ You'll need API keys for Google Gemini, OpenRouter, SerpAPI, and Mistral.
     OPENROUTER_API_KEY="YOUR_OPENROUTER_API_KEY"
     SERPAPI_API_KEY="YOUR_SERPAPI_API_KEY"
     MISTRAL_API_KEY="YOUR_MISTRAL_API_KEY"
+
+    # Optional: Provide a GitHub PAT to pre-fill it and increase API limits.
+    # This PAT will be readable by the client-side application.
+    NEXT_PUBLIC_GITHUB_PAT="YOUR_GITHUB_PAT"
     ```
 
 ### 4. Run the development server
