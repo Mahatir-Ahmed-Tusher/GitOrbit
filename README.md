@@ -4,7 +4,15 @@
 
 GitOrbit provides a suite of AI-powered tools to help you understand, navigate, and document any GitHub repository—all securely within your browser. It's designed for developers, team leads, and anyone who needs to quickly get up to speed with a new codebase.
 
-The live application is not yet deployed, but you can run it locally by following the instructions below.
+The live application is deployed, check this out: https://gitorbit-ai.vercel.app/
+
+![image](https://github.com/user-attachments/assets/5f787b7f-caa2-454a-95da-841af3f887db)
+
+
+
+
+
+You can also run it locally by following the instructions below.
 
 ---
 
@@ -22,13 +30,42 @@ This project was developed by **Mahatir Ahmed Tusher**, a passionate software de
 GitOrbit is packed with features to make code exploration and understanding effortless:
 
 - 🔍 **AI-Powered Repo Search**: Discover new projects by searching for topics or technologies in natural language. Powered by SerpAPI and Mistral.
+
+![image](https://github.com/user-attachments/assets/ae9fc757-ba0f-4a3a-a685-8f48827bcd12)
+
+  
 - 💬 **AI Code Chat**: Ask questions about the entire codebase in natural language. Get instant, context-aware answers powered by Google's Gemini.
+
+![image](https://github.com/user-attachments/assets/3e41891a-b134-4f91-8761-df0a1e48ed9a)
+
+
 - 📜 **Commit Explorer**: Understand the story behind every change. Get AI-powered explanations for any commit diff.
+
+![image](https://github.com/user-attachments/assets/65886907-1dbb-4e35-bec1-37cdd15e0c58)
+
 - 📝 **AI-Generated Notes**: Automatically generate high-level technical documentation for any repository. Perfect for onboarding new team members.
+
+![image](https://github.com/user-attachments/assets/39651136-685f-4b4f-ab8b-6fb9a57fda90)
+
+  
 - 📊 **Repository Health Dashboard**: Get a visual overview of your repository’s health, including commit frequency, contributor activity, and open issues/PRs, complete with AI-driven insights.
+
+- 
 - 🗺️ **Codebase Visualization**: Visualize the entire file structure of a repository as an interactive diagram.
-- 💻 **In-Browser Code Editor**: Explore, read, and even commit changes with a familiar Monaco-based editor, right in your browser.
+
+![image](https://github.com/user-attachments/assets/aaefc070-7b94-47fb-9ecf-779c3f8f9cbd)
+
+  
+- 💻 **In-Browser Code Editor with AI**: Explore, read, and even commit changes with a familiar Monaco-based editor, right in your browser using AI. you can also commit the changes after editing.
+
+  ![image](https://github.com/user-attachments/assets/38548aa9-67b4-4338-84da-8d476ce46019)
+  
+  
 - 🔐 **Privacy First**: All data, including your code and optional GitHub token, is stored exclusively in your browser's local storage. Nothing is stored on a server.
+
+![image](https://github.com/user-attachments/assets/4cbb84a3-8bd5-41a7-875f-7088a13b4ac0)
+
+  
 - 🎤 **Transcript Summarizer**: Paste meeting transcripts and get instant summaries and action items.
 
 ### 🤖 GitOrbot: Your Landing Page Assistant
@@ -36,6 +73,9 @@ GitOrbit now includes a friendly AI assistant, "GitOrbot," available directly on
 - **Instant Answers:** Get quick answers to common questions like how to use a PAT or what features are available.
 - **Powered by OpenRouter:** This assistant uses a different model than the core application (DeepSeek, via OpenRouter) to provide specialized, focused help.
 - **How it Works:** The chatbot is a client-side component that securely calls a Next.js Server Action. This action contains the bot's system prompt and communicates with the OpenRouter API, ensuring API keys are never exposed on the client side.
+
+  ![image](https://github.com/user-attachments/assets/6d0a67ad-e350-470f-a7c4-ba6ca5e1290a)
+
 
 ---
 
@@ -194,3 +234,5 @@ Contributions are welcome! Please feel free to open an issue or submit a pull re
 ## License
 
 This project is licensed under the MIT License.
+
+
