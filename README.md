@@ -82,6 +82,7 @@ GitOrbit now includes a friendly AI assistant, "GitOrbot," available directly on
 ## Tech Stack
 
 - **Framework**: [Next.js](https://nextjs.org/) (App Router)
+- **Authentication**: [Firebase Authentication](https://firebase.google.com/docs/auth)
 - **AI**: [Google Gemini](https://ai.google.dev/) via [Genkit](https://firebase.google.com/docs/genkit), [Mistral](https://mistral.ai/), & [OpenRouter](https://openrouter.ai/)
 - **Search**: [SerpAPI](https://serpapi.com/)
 - **UI**: [Shadcn UI](https://ui.shadcn.com/), [Tailwind CSS](https://tailwindcss.com/), [Framer Motion](https://www.framer.com/motion/)
@@ -112,26 +113,85 @@ cd GitOrbit
 npm install
 ```
 
-### 3. Set up environment variables
+### 3. Set up Authentication & API Keys
 
-You'll need API keys for Google Gemini, OpenRouter, SerpAPI, and Mistral. You can also optionally provide a GitHub Personal Access Token to avoid entering it in the UI.
+This is a multi-step process involving Firebase, GitHub, and other AI services.
 
-1.  Create a new file named `.env` in the root of the project.
-2.  Get your Google Gemini API key from [Google AI Studio](https://aistudio.google.com/app/apikey).
-3.  Get your OpenRouter API key from the [OpenRouter Website](https://openrouter.ai/keys).
-4.  Get your SerpAPI key from the [SerpAPI Website](https://serpapi.com/dashboard).
-5.  Get your Mistral API key from the [Mistral Platform](https://console.mistral.ai/).
-6.  Open the `.env` file and add your API keys in the following format:
-    ```
-    GOOGLE_API_KEY="YOUR_GEMINI_API_KEY"
-    OPENROUTER_API_KEY="YOUR_OPENROUTER_API_KEY"
-    SERPAPI_API_KEY="YOUR_SERPAPI_API_KEY"
-    MISTRAL_API_KEY="YOUR_MISTRAL_API_KEY"
+**Step 3.1: Create Environment File**
 
-    # Optional: Provide a GitHub PAT to pre-fill it and increase API limits.
-    # This PAT will be readable by the client-side application.
-    NEXT_PUBLIC_GITHUB_PAT="YOUR_GITHUB_PAT"
-    ```
+Create a new file named `.env` in the root of the project. You will fill this out in the next steps.
+
+```
+# --- AI & Search API Keys ---
+GOOGLE_API_KEY=""
+OPENROUTER_API_KEY=""
+SERPAPI_API_KEY=""
+MISTRAL_API_KEY=""
+
+# --- Firebase Configuration (for GitHub Authentication) ---
+NEXT_PUBLIC_FIREBASE_API_KEY=""
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=""
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=""
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=""
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=""
+NEXT_PUBLIC_FIREBASE_APP_ID=""
+NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID=""
+
+# --- Optional: GitHub PAT ---
+NEXT_PUBLIC_GITHUB_PAT=""
+```
+
+**Step 3.2: Configure Firebase**
+
+1.  Go to the [Firebase Console](https://console.firebase.google.com/) and create a new project.
+2.  Add a new **Web App (`</>`)** to your project.
+3.  After registering the app, Firebase will give you a `firebaseConfig` object. Copy these values into the `NEXT_PUBLIC_FIREBASE_*` variables in your `.env` file.
+4.  In the Firebase console, go to **Build > Authentication** from the side menu.
+5.  Click the **Sign-in method** tab and select **GitHub** from the provider list.
+6.  You will see an **Authorization callback URL**. Copy this URL for the next step.
+7.  **Do not close this page yet.**
+
+**Step 3.3: Configure GitHub OAuth App**
+
+1.  Go to your [GitHub Developer Settings > OAuth Apps](https://github.com/settings/developers).
+2.  Click **"New OAuth App"**.
+3.  Fill out the form. The **Homepage URL** will change depending on where you are running the app. The **Authorization callback URL** will always be the one you copied from Firebase.
+4.  Click **"Register application"**.
+5.  On the next page, copy the **Client ID**. Then, click **"Generate a new client secret"** and copy the secret.
+
+**Step 3.4: Finalize Firebase and Domain Setup**
+
+1.  Go back to your GitHub provider settings in Firebase. Paste in the **Client ID** and **Client Secret** you just got from GitHub and **Enable** the provider.
+2.  Now, go to the **Settings** tab in Firebase Authentication. Under **Authorized domains**, you must add the domain where your app is running.
+
+**Environment-Specific Configuration**
+
+You will need to adjust your GitHub App settings and Firebase Authorized Domains depending on where you are running the app.
+
+-   **For Local Development:**
+    -   **GitHub Homepage URL:** `http://localhost:3000`
+    -   **Firebase Authorized Domain:** `localhost`
+
+-   **For Firebase Studio / Cloud Workstation:**
+    -   Find your unique URL (e.g., `https://6000-....cloudworkstations.dev`) in the browser's address bar or console logs.
+    -   **GitHub Homepage URL:** Your unique cloud workstation URL.
+    -   **Firebase Authorized Domain:** The domain part of your URL (e.g., `6000-...cloudworkstations.dev`).
+
+-   **For Production (Vercel):**
+    -   **GitHub Homepage URL:** `https://gitorbit-ai.vercel.app`
+    -   **Firebase Authorized Domain:** `gitorbit-ai.vercel.app`
+
+You can have multiple authorized domains in Firebase and you can update the GitHub Homepage URL at any time.
+
+**Step 3.5: Add other API Keys**
+
+Get the API keys for the AI and search services and add them to your `.env` file:
+*   **Google Gemini (`GOOGLE_API_KEY`):** [Google AI Studio](https://aistudio.google.com/app/apikey)
+*   **OpenRouter (`OPENROUTER_API_KEY`):** [OpenRouter Keys](https://openrouter.ai/keys)
+*   **SerpApi (`SERPAPI_API_KEY`):** [SerpApi Dashboard](https://serpapi.com/dashboard)
+*   **Mistral (`MISTRAL_API_KEY`):** [Mistral Platform](https://console.mistral.ai/)
+*   **Optional GitHub PAT (`NEXT_PUBLIC_GITHUB_PAT`):** [GitHub Tokens](https://github.com/settings/tokens). This is a fallback to increase API limits for non-authenticated actions.
+
 
 ### 4. Run the development server
 
@@ -139,7 +199,7 @@ You'll need API keys for Google Gemini, OpenRouter, SerpAPI, and Mistral. You ca
 npm run dev
 ```
 
-The application should now be running at [http://localhost:3000](http://localhost:3000).
+The application should now be running.
 
 ---
 
@@ -206,6 +266,7 @@ The project follows a standard Next.js App Router structure. Below is an extensi
 │   │   └── genkit.ts       # Genkit initialization and configuration (Google AI provider)
 │   ├── components/         # Reusable React components
 │   │   ├── providers/      # React context providers
+│   │   │   ├── auth-provider.tsx    # Manages Firebase authentication state
 │   │   │   └── theme-provider.tsx # Manages light/dark theme state
 │   │   ├── ui/             # Shadcn UI components (e.g., Button, Card, etc.)
 │   │   ├── app-sidebar.tsx   # The main navigation sidebar for the app
@@ -217,6 +278,7 @@ The project follows a standard Next.js App Router structure. Below is an extensi
 │   │   ├── use-mobile.tsx    # Hook to detect if the user is on a mobile device
 │   │   └── use-toast.ts      # Hook for displaying toast notifications
 │   ├── lib/                # Utility functions and type definitions
+│   │   ├── firebase.ts     # Firebase app initialization and configuration
 │   │   ├── types.ts        # TypeScript type definitions used throughout the app
 │   │   └── utils.ts        # General utility functions (e.g., `cn` for Tailwind classes)
 ├── .env                    # Local environment variables (API keys). This file is not committed.
@@ -234,5 +296,6 @@ Contributions are welcome! Please feel free to open an issue or submit a pull re
 ## License
 
 This project is licensed under the MIT License.
+
 
 
