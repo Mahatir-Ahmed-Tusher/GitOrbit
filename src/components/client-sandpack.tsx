@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button"
 import { useToast } from "@/hooks/use-toast"
 import { editCode } from "@/ai/flows/edit-code"
 import { explainCode } from "@/ai/flows/explain-code"
-import { Loader2, Code, Eye, Download, Send, Sparkles, GitBranch } from "lucide-react"
+import { Loader2, Code, Eye, Download, Send, Sparkles, GitBranch, Save } from "lucide-react"
 import {
   Dialog,
   DialogContent,
@@ -29,7 +29,7 @@ import { Textarea } from "@/components/ui/textarea"
 import JSZip from "jszip"
 import { AnimatePresence, motion } from "framer-motion"
 import { useLocalStorage } from "@/hooks/use-local-storage"
-import { type LoadedRepoInfo, type RepoFile } from "@/lib/types"
+import { type LoadedRepoInfo, type RepoFile, type LocalProject } from "@/lib/types"
 
 const AiInteractionDialog = ({ isOpen, onOpenChange }: { isOpen: boolean, onOpenChange: (open: boolean) => void }) => {
     const { sandpack } = useSandpack()
@@ -177,7 +177,7 @@ const VscodeIcon = () => (
     </svg>
 )
 
-const SandpackInternal = ({ repoName, repoFiles }: { repoName: string; repoFiles: RepoFile[] }) => {
+const SandpackInternal = ({ repoName, repoFiles, isLocalMode }: { repoName: string; repoFiles: RepoFile[], isLocalMode: boolean }) => {
     const { sandpack } = useSandpack()
     const { files, activeFile } = sandpack
     const { toast } = useToast()
@@ -186,6 +186,7 @@ const SandpackInternal = ({ repoName, repoFiles }: { repoName: string; repoFiles
     const [showAiHint, setShowAiHint] = useState(false);
     
     const [loadedRepo] = useLocalStorage<LoadedRepoInfo | null>("gitorbit_loaded_repo", null)
+    const [localProject, setLocalProject] = useLocalStorage<LocalProject | null>('gitorbit_local_project', null)
     const [githubPat] = useLocalStorage("gitorbit_github_pat", "")
     const initialFilesRef = useRef(files)
     const [modifiedFiles, setModifiedFiles] = useState<Set<string>>(new Set())
@@ -255,6 +256,22 @@ const SandpackInternal = ({ repoName, repoFiles }: { repoName: string; repoFiles
         setIsVscodeDialogOpen(true);
     };
 
+    const handleSaveLocal = () => {
+        if (!isLocalMode || !localProject) return
+        
+        const updatedFiles: RepoFile[] = Object.entries(files).map(([path, file]) => ({
+            path: path.substring(1), // remove leading slash
+            content: (file as {code: string}).code,
+            mode: fileModes.get(path) || "100644"
+        }))
+
+        const updatedProject: LocalProject = { ...localProject, files: updatedFiles }
+        setLocalProject(updatedProject)
+        toast({ title: "Project Saved", description: "Your changes have been saved to local storage." })
+        initialFilesRef.current = files // Update base for future changes
+        setModifiedFiles(new Set())
+    }
+
     const handleCommit = async () => {
         if (!loadedRepo || !githubPat) {
             toast({
@@ -322,7 +339,7 @@ const SandpackInternal = ({ repoName, repoFiles }: { repoName: string; repoFiles
                 headers,
                 body: JSON.stringify({ base_tree: baseTreeSha, tree }),
             });
-            if (!createTreeResponse.ok) {
+             if (!createTreeResponse.ok) {
                  const errorBody = await createTreeResponse.json().catch(() => ({}));
                  console.error("GitHub API Error (create-tree):", errorBody);
                  throw new Error(`Failed to create new tree. GitHub said: ${errorBody.message || createTreeResponse.statusText}`);
@@ -380,10 +397,17 @@ const SandpackInternal = ({ repoName, repoFiles }: { repoName: string; repoFiles
                         <VscodeIcon />
                         Open in VS Code
                     </Button>
-                     <Button variant="outline" size="sm" onClick={() => setIsCommitDialogOpen(true)} disabled={modifiedFiles.size === 0}>
-                        <GitBranch className="mr-2" />
-                        Commit ({modifiedFiles.size})
-                    </Button>
+                    {isLocalMode ? (
+                        <Button variant="outline" size="sm" onClick={handleSaveLocal} disabled={modifiedFiles.size === 0}>
+                            <Save className="mr-2" />
+                            Save ({modifiedFiles.size})
+                        </Button>
+                    ) : (
+                        <Button variant="outline" size="sm" onClick={() => setIsCommitDialogOpen(true)} disabled={modifiedFiles.size === 0}>
+                            <GitBranch className="mr-2" />
+                            Commit ({modifiedFiles.size})
+                        </Button>
+                    )}
                     <div className="flex items-center gap-1 rounded-md bg-muted p-1">
                         <Button variant={viewMode === 'code' ? 'secondary' : 'ghost'} size="sm" onClick={() => setViewMode('code')} className="h-8 px-3">
                             <Code className="mr-2" /> Code
@@ -465,7 +489,7 @@ const SandpackInternal = ({ repoName, repoFiles }: { repoName: string; repoFiles
     )
 }
 
-export function ClientSandpack({ files, repoName, repoFiles }: { files: Record<string, { code: string }>, repoName: string, repoFiles: RepoFile[] }) {
+export function ClientSandpack({ files, repoName, repoFiles, isLocalMode }: { files: Record<string, { code: string }>, repoName: string, repoFiles: RepoFile[], isLocalMode: boolean }) {
     const { theme } = useTheme()
     
     const [initialActiveFile, setInitialActiveFile] = useState<string | undefined>(undefined);
@@ -494,24 +518,14 @@ export function ClientSandpack({ files, repoName, repoFiles }: { files: Record<s
         <SandpackProvider
             key={sandpackKey}
             files={files}
-            template="react-ts"
+            template="nextjs"
             theme={theme === "dark" ? "dark" : "light"}
             options={{
                 activeFile: initialActiveFile,
                 editorHeight: '100%',
             }}
-            customSetup={{
-                 dependencies: {
-                    "react": "latest",
-                    "react-dom": "latest",
-                    "react-scripts": "latest",
-                    "lucide-react": "latest",
-                 },
-            }}
         >
-            <SandpackInternal repoName={repoName} repoFiles={repoFiles} />
+            <SandpackInternal repoName={repoName} repoFiles={repoFiles} isLocalMode={isLocalMode} />
         </SandpackProvider>
     )
 }
-    
-    

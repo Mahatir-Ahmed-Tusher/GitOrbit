@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState } from "react"
@@ -8,13 +9,14 @@ import { useToast } from "@/hooks/use-toast"
 import { isBinary } from "@/lib/utils"
 import { type LoadedRepoInfo, type GitHubCommit, type RepoFile, type RepoSearchResult } from "@/lib/types"
 import { searchRepos } from "@/ai/actions/search-repos"
+import { useAuth } from "@/components/providers/auth-provider"
 
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { Github, History, Loader2, MessageSquare, GitCommit, Notebook, Network, CodeXml, ShieldCheck, Info, Search, AlertCircle } from "lucide-react"
+import { Github, History, Loader2, MessageSquare, GitCommit, Notebook, Network, CodeXml, ShieldCheck, Info, Search, AlertCircle, LogIn, PlusSquare } from "lucide-react"
 
 const features = [
   { 
@@ -158,6 +160,7 @@ const RepoSearch = ({ onRepoSelect }: { onRepoSelect: (url: string) => void }) =
 
 export default function HomePage() {
   const router = useRouter()
+  const { user, signInWithGitHub, githubToken, loading: authLoading } = useAuth();
   const [repoUrl, setRepoUrl] = useState("")
   const [isLoading, setIsLoading] = useState(false)
 
@@ -197,9 +200,11 @@ export default function HomePage() {
     setIsLoading(true)
     toast({ title: "Analyzing Repository...", description: "This may take a moment. We're fetching commits and file contents." })
     
+    // Use the authenticated user's token first, then fallback to PAT from env/localStorage
+    const token = githubToken || githubPat;
     const headers = new Headers({ 'Accept': 'application/vnd.github.v3+json' });
-    if (githubPat) {
-      headers.set('Authorization', `Bearer ${githubPat}`);
+    if (token) {
+      headers.set('Authorization', `Bearer ${token}`);
     }
 
     try {
@@ -207,7 +212,10 @@ export default function HomePage() {
       if (!repoDetailsResponse.ok) {
         let errorMessage = `Failed to load the repository. It might be private, not exist, or the URL could be incorrect.`;
         if (repoDetailsResponse.status === 403) {
-            errorMessage += ` You may have hit a GitHub API rate limit. Please add a Personal Access Token in Settings to increase the limit.`
+            errorMessage += ` You may have hit a GitHub API rate limit.`
+            if (!token) {
+                 errorMessage += ` Please sign in with GitHub to increase the limit.`
+            }
         } else if (repoDetailsResponse.status === 404) {
             errorMessage = `Repository not found. Please check the URL. It might be private or contain a typo.`;
         }
@@ -291,6 +299,21 @@ export default function HomePage() {
     }
   };
 
+  if (!user && !authLoading) {
+    return (
+        <div className="flex flex-col items-center justify-center text-center py-16 h-full p-4 sm:p-6 md:p-8">
+            <Github className="h-12 w-12 text-muted-foreground mb-4" />
+            <h2 className="text-2xl font-semibold">Welcome to GitOrbit</h2>
+            <p className="text-muted-foreground mt-2 max-w-md">
+                Please sign in with your GitHub account to begin exploring repositories.
+            </p>
+            <Button onClick={signInWithGitHub} className="mt-6">
+                <LogIn className="mr-2" />
+                Sign In with GitHub
+            </Button>
+        </div>
+    )
+  }
 
   return (
     <div className="p-4 sm:p-6 md:p-8 space-y-8">
@@ -325,7 +348,7 @@ export default function HomePage() {
             <div className="flex items-start gap-2 p-3 text-xs text-muted-foreground bg-background/50 rounded-lg">
                 <Info className="h-4 w-4 mt-0.5 flex-shrink-0 text-primary" />
                 <span>
-                    For private repositories, please add your GitHub Personal Access Token in the{" "}
+                    If it's your private repo, then enter GitHub personal access token in the{" "}
                     <Link href="/settings" className="font-semibold text-primary hover:underline">
                         settings
                     </Link>
@@ -352,7 +375,22 @@ export default function HomePage() {
         </CardContent>
       </Card>
 
-      <RepoSearch onRepoSelect={setRepoUrl} />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <Card>
+            <CardHeader>
+                <CardTitle className="flex items-center gap-2"><PlusSquare /> Create New Project</CardTitle>
+                <CardDescription>Start from scratch or upload an existing project from your local machine.</CardDescription>
+            </CardHeader>
+            <CardContent className="flex items-center justify-center">
+                <Button asChild size="lg">
+                    <Link href="/upload">
+                        Add Your Project
+                    </Link>
+                </Button>
+            </CardContent>
+        </Card>
+        <RepoSearch onRepoSelect={setRepoUrl} />
+      </div>
       
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2">

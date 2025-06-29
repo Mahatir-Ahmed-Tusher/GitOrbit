@@ -13,11 +13,12 @@ import {
   Github,
   Sparkles,
   ShieldCheck,
+  LogIn,
 } from "lucide-react"
 import { motion } from "framer-motion"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { GitOrbotWidget } from "@/components/gitorbot-widget"
-import { useEffect, useState } from "react"
+import { useAuth } from "@/components/providers/auth-provider"
 
 const FeatureCard = ({ icon, title, description }: { icon: React.ReactNode, title: string, description: string }) => (
   <Card className="h-full bg-card/50 backdrop-blur-sm transform hover:scale-105 transition-all duration-300 border-border/50 hover:border-primary/20 hover:shadow-lg hover:shadow-primary/5">
@@ -65,6 +66,8 @@ const features = [
 ];
 
 export default function Home() {
+  const { user, signInWithGitHub } = useAuth();
+
   return (
     <div className="flex flex-col min-h-screen bg-background font-body">
       <header className="sticky top-0 z-50 w-full border-b border-border/40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -77,6 +80,16 @@ export default function Home() {
              <Button variant="ghost" asChild>
                 <Link href="/user-guide">User Guide</Link>
             </Button>
+            {user ? (
+               <Button asChild>
+                  <Link href="/home">Get Started</Link>
+              </Button>
+            ) : (
+              <Button onClick={signInWithGitHub}>
+                <LogIn className="mr-2" />
+                Sign In with GitHub
+              </Button>
+            )}
              <Link href="https://github.com/Mahatir-Ahmed-Tusher/GitOrbit" target="_blank" rel="noopener noreferrer">
                 <img src="/github.png" alt="GitHub" className="h-6 w-6" />
             </Link>
@@ -121,12 +134,19 @@ export default function Home() {
                         GitOrbit provides a suite of AI-powered tools to help you understand, navigate, and document any GitHub repository—all securely within your browser.
                     </p>
                     <div className="flex flex-col sm:flex-row gap-4 justify-center md:justify-start">
-                        <Button size="lg" asChild className="bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg shadow-primary/25">
-                            <Link href="/home">
-                                <Sparkles className="mr-2"/>
-                                Launch Mission Control
-                            </Link>
-                        </Button>
+                        {user ? (
+                           <Button size="lg" asChild className="bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg shadow-primary/25">
+                                <Link href="/home">
+                                    <Sparkles className="mr-2"/>
+                                    Launch Mission Control
+                                </Link>
+                            </Button>
+                        ) : (
+                             <Button size="lg" onClick={signInWithGitHub} className="bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg shadow-primary/25">
+                                <LogIn className="mr-2"/>
+                                Sign In to Get Started
+                            </Button>
+                        )}
                         <Button size="lg" variant="secondary" asChild className="bg-accent text-accent-foreground hover:bg-accent/90 shadow-lg shadow-accent/20">
                             <Link href="https://mahatirtusher.github.io/thoughtexpedition.github.io/" target="_blank">
                                 <Github className="mr-2"/>

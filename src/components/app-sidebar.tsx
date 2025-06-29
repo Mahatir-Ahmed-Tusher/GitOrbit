@@ -14,9 +14,13 @@ import {
   HeartPulse,
   MoreHorizontal,
   Trash2,
+  LogOut,
+  User as UserIcon,
+  Users,
 } from "lucide-react"
 import { usePathname, useRouter } from "next/navigation"
 import Link from "next/link"
+import Image from "next/image"
 
 import {
   Sidebar,
@@ -31,17 +35,23 @@ import {
 import { Separator } from "@/components/ui/separator"
 import { useLocalStorage } from "@/hooks/use-local-storage"
 import { type LoadedRepoInfo } from "@/lib/types"
+import { useAuth } from "@/components/providers/auth-provider"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuLabel,
+  DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu"
+import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar"
+import { Button } from "./ui/button"
 
 
 export function AppSidebar() {
   const pathname = usePathname()
   const router = useRouter()
+  const { user, signOut, loading } = useAuth()
 
   const [repoHistory, setRepoHistory] = useLocalStorage<LoadedRepoInfo[]>('gitorbit_repo_history', [])
   const [loadedRepo, setLoadedRepo] = useLocalStorage<LoadedRepoInfo | null>('gitorbit_loaded_repo', null)
@@ -64,6 +74,7 @@ export function AppSidebar() {
     { href: "/notes", label: "Notes", icon: Notebook },
     { href: "/transcripts", label: "Transcripts", icon: FileText },
     { href: "/visualize", label: "Visualize", icon: Network },
+    { href: "/collaborators", label: "Collaborators", icon: Users },
   ]
 
   return (
@@ -90,7 +101,7 @@ export function AppSidebar() {
           ))}
         </SidebarMenu>
         
-        {repoHistory.length > 0 && (
+        {user && repoHistory.length > 0 && (
           <>
             <Separator className="my-1" />
             <div className="p-2 pt-2">
@@ -137,15 +148,59 @@ export function AppSidebar() {
         <Separator className="my-1" />
         <SidebarMenu>
             <SidebarMenuItem>
-                 <Link href="/settings" className="w-full">
-                    <SidebarMenuButton
-                        isActive={pathname === "/settings"}
-                        tooltip="Settings"
-                    >
-                        <Settings />
-                        <span>Settings</span>
-                    </SidebarMenuButton>
-                </Link>
+                 <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <SidebarMenuButton
+                            variant="ghost"
+                            className="w-full justify-start group-data-[collapsible=icon]:w-auto"
+                            tooltip="Account Settings"
+                        >
+                            {loading ? (
+                                <div className="h-8 w-8 rounded-full bg-sidebar-border/50 animate-pulse" />
+                            ) : user ? (
+                                <Avatar className="h-8 w-8">
+                                    <AvatarImage src={user.photoURL ?? ''} alt={user.displayName ?? 'User'} />
+                                    <AvatarFallback>
+                                        <UserIcon />
+                                    </AvatarFallback>
+                                </Avatar>
+                            ) : (
+                                <UserIcon />
+                            )}
+                             <span className="truncate">{user?.displayName ?? 'Not Signed In'}</span>
+                        </SidebarMenuButton>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent className="w-56 mb-2" side="top" align="start">
+                        {user ? (
+                        <>
+                            <DropdownMenuLabel className="font-normal">
+                            <div className="flex flex-col space-y-1">
+                                <p className="text-sm font-medium leading-none">{user.displayName}</p>
+                                <p className="text-xs leading-none text-muted-foreground">
+                                {user.email}
+                                </p>
+                            </div>
+                            </DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem asChild>
+                                <Link href="/settings"><Settings className="mr-2 h-4 w-4" />Settings</Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={signOut} className="text-destructive focus:text-destructive">
+                                <LogOut className="mr-2 h-4 w-4" />
+                                Sign out
+                            </DropdownMenuItem>
+                        </>
+                        ) : (
+                             <DropdownMenuItem asChild>
+                                <Link href="/home">
+                                    <LogOut className="mr-2 h-4 w-4" />
+                                    Sign In
+                                </Link>
+                            </DropdownMenuItem>
+                        )}
+                    </DropdownMenuContent>
+                </DropdownMenu>
             </SidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>

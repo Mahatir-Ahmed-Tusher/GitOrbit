@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import { Inter, Source_Code_Pro } from 'next/font/google';
 import './globals.css';
 import { ThemeProvider } from '@/components/providers/theme-provider';
+import { AuthProvider } from '@/components/providers/auth-provider';
 import { Toaster } from '@/components/ui/toaster';
 
 const inter = Inter({
@@ -33,8 +34,10 @@ export default function RootLayout({
       <head />
       <body className={`${inter.variable} ${sourceCodePro.variable} font-body antialiased`}>
         <ThemeProvider>
-          {children}
-          <Toaster />
+          <AuthProvider>
+            {children}
+            <Toaster />
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>

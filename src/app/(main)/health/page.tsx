@@ -1,17 +1,18 @@
+
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
 import Link from "next/link"
 import { useLocalStorage } from "@/hooks/use-local-storage"
 import { useToast } from "@/hooks/use-toast"
-import { analyzeRepoHealth, AnalyzeRepoHealthInput } from "@/ai/flows/analyze-repo-health"
-import { type LoadedRepoInfo, type HealthMetrics, type CachedHealthData, type ContributorStats, type CommitActivity } from "@/lib/types"
+import { analyzeRepoHealth } from "@/ai/flows/analyze-repo-health"
+import { type LoadedRepoInfo, type HealthMetrics, type CachedHealthData, type ContributorStats, type CommitActivity, type Issue } from "@/lib/types"
 
 import { Bar, BarChart, CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
 import { motion } from "framer-motion"
 import { format, subDays } from "date-fns"
 
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Loader2, HeartPulse, AlertCircle, GitPullRequest, CircleDot } from "lucide-react"
@@ -59,7 +60,7 @@ const ContributorsChart = ({ data }: { data: ContributorStats }) => {
                 <CardTitle className="text-lg">Top Contributors</CardTitle>
             </CardHeader>
             <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
+                 <ResponsiveContainer width="100%" height={300}>
                     <BarChart data={chartData} layout="vertical">
                         <CartesianGrid strokeDasharray="3 3" />
                         <XAxis type="number" />
@@ -73,12 +74,17 @@ const ContributorsChart = ({ data }: { data: ContributorStats }) => {
     )
 }
 
-const IssueStats = ({ issues, pulls }: { issues: { open: number; closed: number }, pulls: { open: number; closed: number } }) => {
+const IssueStats = ({ issues, pulls }: { issues: Issue[], pulls: Issue[] }) => {
+    const openIssues = issues.filter(i => i.state === 'open').length;
+    const closedIssues = issues.length - openIssues;
+    const openPulls = pulls.filter(p => p.state === 'open').length;
+    const closedPulls = pulls.length - openPulls;
+
     const stats = [
-        { icon: <CircleDot className="text-green-500" />, label: "Open Issues", value: issues.open },
-        { icon: <GitPullRequest className="text-red-500" />, label: "Open PRs", value: pulls.open },
-        { icon: <CircleDot className="text-muted-foreground" />, label: "Closed Issues", value: issues.closed },
-        { icon: <GitPullRequest className="text-muted-foreground" />, label: "Merged/Closed PRs", value: pulls.closed },
+        { icon: <CircleDot className="text-green-500" />, label: "Open Issues", value: openIssues },
+        { icon: <GitPullRequest className="text-red-500" />, label: "Open PRs", value: openPulls },
+        { icon: <CircleDot className="text-muted-foreground" />, label: "Closed Issues", value: closedIssues },
+        { icon: <GitPullRequest className="text-muted-foreground" />, label: "Merged/Closed PRs", value: closedPulls },
     ]
 
     return (
@@ -131,6 +137,7 @@ export default function HealthPage() {
             const cachedData = localStorage.getItem(cacheKey);
             if (cachedData) {
                 const parsed = JSON.parse(cachedData) as CachedHealthData
+                // Use cache if it's less than an hour old
                 if (Date.now() - parsed.timestamp < 3600000) {
                     setHealthData(parsed)
                     setIsLoading(false)
@@ -144,8 +151,8 @@ export default function HealthPage() {
             const [commitActivityRes, contributorsRes, issuesRes, pullsRes] = await Promise.all([
                 fetch(`https://api.github.com/repos/${loadedRepo.owner}/${loadedRepo.repo}/stats/commit_activity`, { headers }),
                 fetch(`https://api.github.com/repos/${loadedRepo.owner}/${loadedRepo.repo}/stats/contributors`, { headers }),
-                fetch(`https://api.github.com/repos/${loadedRepo.owner}/${loadedRepo.repo}/issues?state=all&since=${sinceDate}&per_page=30`, { headers }),
-                fetch(`https://api.github.com/repos/${loadedRepo.owner}/${loadedRepo.repo}/pulls?state=all&per_page=30`, { headers }),
+                fetch(`https://api.github.com/repos/${loadedRepo.owner}/${loadedRepo.repo}/issues?state=all&since=${sinceDate}&per_page=100`, { headers }),
+                fetch(`https://api.github.com/repos/${loadedRepo.owner}/${loadedRepo.repo}/pulls?state=all&per_page=100`, { headers }),
             ]);
 
             if (commitActivityRes.status === 202 || contributorsRes.status === 202) {
@@ -156,40 +163,18 @@ export default function HealthPage() {
             }
             
             if (!commitActivityRes.ok || !contributorsRes.ok || !issuesRes.ok || !pullsRes.ok) {
-                throw new Error(`Failed to fetch repo health data. Statuses: Commits ${commitActivityRes.status}, Contribs ${contributorsRes.status}, Issues ${issuesRes.status}, PRs ${pullsRes.status}`);
+                 throw new Error(`Failed to fetch repo health data. Statuses: Commits ${commitActivityRes.status}, Contribs ${contributorsRes.status}, Issues ${issuesRes.status}, PRs ${pullsRes.status}`);
             }
 
-            const issuesData = await issuesRes.json() as any[];
-            const pullsData = await pullsRes.json() as any[];
-            const rawContributors = await contributorsRes.json();
             const metrics: HealthMetrics = {
-                commitActivity: (await commitActivityRes.json()).slice(-12),
-                contributors: rawContributors.slice(0, 10).map((c: any) => ({
-                    author: c.author ? { 
-                        login: c.author.login || "unknown", 
-                        avatar_url: c.author.avatar_url || "" 
-                    } : { login: "unknown", avatar_url: "" },
-                    total: c.total || 0,
-                })),
-                issues: {
-                    open: issuesData.filter((issue: any) => !issue.pull_request && issue.state === 'open').length,
-                    closed: issuesData.filter((issue: any) => !issue.pull_request && issue.state !== 'open').length,
-                },
-                pulls: {
-                    open: pullsData.filter((p: any) => p.state === 'open').length,
-                    closed: pullsData.filter((p: any) => p.state !== 'open').length,
-                },
-            };
-            
-            console.log("Processed metrics:", metrics); // Debug log
-            toast({ title: "Analyzing data with AI..." })
-            const input: AnalyzeRepoHealthInput = { repoUrl: loadedRepo.url, metrics };
-            const inputString = JSON.stringify(input);
-            const estimatedTokens = Math.ceil(inputString.length / 4);
-            if (estimatedTokens > 1048575) {
-                throw new Error(`Input size too large: ${estimatedTokens} tokens. Try a shorter time range or smaller repository.`);
+                commitActivity: await commitActivityRes.json(),
+                contributors: await contributorsRes.json(),
+                issues: (await issuesRes.json()).filter((issue: any) => !issue.pull_request),
+                pulls: await pullsRes.json(),
             }
-            const insights = await analyzeRepoHealth(input)
+            
+            toast({ title: "Analyzing data with AI..." })
+            const insights = await analyzeRepoHealth({ repoUrl: loadedRepo.url, metrics })
 
             const newData: CachedHealthData = { metrics, insights, timestamp: Date.now() }
             setHealthData(newData)
@@ -197,11 +182,8 @@ export default function HealthPage() {
 
         } catch (e: any) {
             console.error("Failed to fetch or analyze health data:", e)
-            const errorMessage = e.message.includes("token count")
-                ? "Input data too large for AI analysis. Try a shorter time range or smaller repository."
-                : e.message || "An unknown error occurred.";
-            setError(errorMessage)
-            toast({ title: "Error", description: errorMessage, variant: "destructive" })
+            setError(e.message || "An unknown error occurred.")
+            toast({ title: "Error", description: e.message, variant: "destructive" })
         } finally {
             setIsLoading(false)
         }
@@ -212,7 +194,8 @@ export default function HealthPage() {
         if (loadedRepo) {
             fetchHealthData()
         }
-    }, [loadedRepo, fetchHealthData]) 
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [loadedRepo]) 
 
     if (!loadedRepo) {
         return (
@@ -220,11 +203,11 @@ export default function HealthPage() {
                 <HeartPulse className="h-12 w-12 text-muted-foreground mb-4" />
                 <h2 className="text-2xl font-semibold">Repository Health</h2>
                 <p className="text-muted-foreground mt-2 max-w-md">
-                    To view health metrics, first load a repository on the{" "}
-                    <Button variant="link" asChild className="p-0 h-auto align-baseline text-base">
-                        <Link href="/home">Home page</Link>
-                    </Button>
-                    .
+                To view health metrics, first load a repository on the{" "}
+                <Button variant="link" asChild className="p-0 h-auto align-baseline text-base">
+                    <Link href="/home">Home page</Link>
+                </Button>
+                .
                 </p>
             </div>
         )
@@ -242,20 +225,12 @@ export default function HealthPage() {
                             <CardDescription>
                                 An overview of activity for{" "}
                                 <a href={loadedRepo.url} target="_blank" rel="noopener noreferrer" className="font-semibold text-primary hover:underline">
-                                    {loadedRepo.owner}/{loadedRepo.repo}
+                                {loadedRepo.owner}/{loadedRepo.repo}
                                 </a>.
                             </CardDescription>
                         </div>
                         <div className="flex gap-2 items-center">
-                            <Select value={timeRange} onValueChange={(value) => {
-                                setTimeRange(value);
-                                if (value === "365") {
-                                    toast({
-                                        title: "Warning",
-                                        description: "Analyzing a full year of data may be slow or fail for large repositories. Consider a shorter range.",
-                                    });
-                                }
-                            }}>
+                            <Select value={timeRange} onValueChange={setTimeRange}>
                                 <SelectTrigger className="w-full md:w-[180px]">
                                     <SelectValue placeholder="Select time range" />
                                 </SelectTrigger>
@@ -282,7 +257,7 @@ export default function HealthPage() {
             )}
 
             {isComputing && !isLoading && (
-                <Card className="border-primary/50">
+                 <Card className="border-primary/50">
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2 text-primary"><Loader2 className="animate-spin" /> Preparing Your Report</CardTitle>
                     </CardHeader>
@@ -312,7 +287,7 @@ export default function HealthPage() {
                     className="space-y-8"
                 >
                     <Card>
-                        <CardHeader>
+                         <CardHeader>
                             <CardTitle className="text-lg">AI Health Insights</CardTitle>
                             <CardDescription>Generated by AI based on the latest metrics.</CardDescription>
                         </CardHeader>
@@ -325,13 +300,13 @@ export default function HealthPage() {
 
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}>
-                            <CommitActivityChart data={healthData.metrics.commitActivity} />
+                           <CommitActivityChart data={healthData.metrics.commitActivity} />
                         </motion.div>
                         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
-                            <ContributorsChart data={healthData.metrics.contributors} />
+                           <ContributorsChart data={healthData.metrics.contributors} />
                         </motion.div>
-                        <motion.div className="lg:col-span-2" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
-                            <IssueStats issues={healthData.metrics.issues} pulls={healthData.metrics.pulls} />
+                         <motion.div className="lg:col-span-2" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }}>
+                           <IssueStats issues={healthData.metrics.issues} pulls={healthData.metrics.pulls} />
                         </motion.div>
                     </div>
                 </motion.div>
