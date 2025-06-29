@@ -22,6 +22,9 @@ const sourceCodePro = Source_Code_Pro({
 export const metadata: Metadata = {
   title: 'GitOrbit',
   description: 'Chat with any GitHub repository, summarize commits, and more. All on the client, powered by AI.',
+  icons: {
+    icon: '/favicon.ico',
+  },
 };
 
 export default function RootLayout({
