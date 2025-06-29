@@ -1,4 +1,3 @@
-
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
@@ -19,7 +18,7 @@ export default function AboutPage() {
                 <Link href="/user-guide">User Guide</Link>
             </Button>
              <Button asChild>
-                <Link href="/home">Get Started</Link>
+                <Link href="/home">Sign In</Link>
             </Button>
              <Link href="https://github.com/Mahatir-Ahmed-Tusher/GitOrbit" target="_blank" rel="noopener noreferrer">
                 <img src="/github.png" alt="GitHub" className="h-6 w-6" />
