@@ -80,14 +80,10 @@ export default function Home() {
              <Button variant="ghost" asChild>
                 <Link href="/user-guide">User Guide</Link>
             </Button>
-            {user ? (
-               <Button asChild>
-                  <Link href="/home">Get Started</Link>
-              </Button>
-            ) : (
+            {user ? null : (
               <Button onClick={signInWithGitHub}>
                 <LogIn className="mr-2" />
-                Sign In with GitHub
+                Sign In
               </Button>
             )}
              <Link href="https://github.com/Mahatir-Ahmed-Tusher/GitOrbit" target="_blank" rel="noopener noreferrer">
@@ -144,7 +140,7 @@ export default function Home() {
                         ) : (
                              <Button size="lg" onClick={signInWithGitHub} className="bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 shadow-lg shadow-primary/25">
                                 <LogIn className="mr-2"/>
-                                Sign In to Get Started
+                                Sign In
                             </Button>
                         )}
                         <Button size="lg" variant="secondary" asChild className="bg-accent text-accent-foreground hover:bg-accent/90 shadow-lg shadow-accent/20">
