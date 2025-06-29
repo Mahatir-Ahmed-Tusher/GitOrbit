@@ -16,9 +16,6 @@ export default function LegalLayout({ children }: { children: React.ReactNode })
              <Button variant="ghost" asChild>
                 <Link href="/user-guide">User Guide</Link>
             </Button>
-             <Button asChild>
-                <Link href="/home">Get Started</Link>
-            </Button>
              <Link href="https://github.com/Mahatir-Ahmed-Tusher/GitOrbit" target="_blank" rel="noopener noreferrer">
                 <img src="/github.png" alt="GitHub" className="h-6 w-6" />
             </Link>
